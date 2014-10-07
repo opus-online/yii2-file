@@ -1,6 +1,6 @@
 {
-    "name": "opus-online/yii2-base",
-    "description": "Base components used by projects and modules",
+    "name": "opus-online/yii2-file",
+    "description": "Filesystem helpers for Yii2 projects and modules",
     "licence": "MIT",
     "type": "yii2-extension",
     "homepage": "https://github.com/opus-online/yii2-base/",
