@@ -3,10 +3,10 @@
     "description": "Filesystem helpers for Yii2 projects and modules",
     "licence": "MIT",
     "type": "yii2-extension",
-    "homepage": "https://github.com/opus-online/yii2-base/",
+    "homepage": "https://github.com/opus-online/yii2-file/",
     "support": {
-        "issues": "https://github.com/opus-online/yii2-base/issues",
-        "source": "https://github.com/opus-online/yii2-base/"
+        "issues": "https://github.com/opus-online/yii2-file/issues",
+        "source": "https://github.com/opus-online/yii2-file/"
     },
     "authors": [
         {
