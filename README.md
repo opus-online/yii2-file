@@ -18,10 +18,10 @@ $user = $this->getUser();
 /** @var Model $this */
 try {
   $fileUpload = new UploadHandler($profileImage->getImageLocationPath(), $this, 'photo');
-  $fileNames = $fileUpload->handleUploadedFiles()->getUploadedFileNames();
-  if (empty($fileName) === false) {
+  $uploadedFileNames = $fileUpload->handleUploadedFiles();
+  foreach ($uploadedFileNames as $fileName) {
     // reset is called because multiple file names are returned, but we uploaded only one file
-    $user->setAttribute('photo_file_name', reset($fileNames));
+    $user->setAttribute('photo_file_name', $fileName);
   }
   $user->saveSafe(['photo_file_name']);
 } catch (InvalidFileUploadException $e) {

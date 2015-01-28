@@ -39,12 +39,6 @@ class UploadHandler extends Object
     private $fileSystem;
 
     /**
-     * Paths of uploaded files
-     * @var array
-     */
-    private $uploadedFileNames = [];
-
-    /**
      * Model instance, this model should provide validators to validate file input
      * @var Model
      */
@@ -75,12 +69,13 @@ class UploadHandler extends Object
      * @param callable $formatFileName This is a function to format file names.
      * Callback signature is function($filename, $fileExtension) Exception is thrown if validation fails
      * @throws InvalidFileUploadException
-     * @return $this
+     * @return array List of file names
      */
     public function handleUploadedFiles(\Closure $formatFileName = null)
     {
         /** @var UploadedFile[] $queuedFiles */
         $queuedFiles = [];
+        $uploadedFileNames = [];
 
         foreach ($this->getUploadedFiles() as $tempFile) {
             $this->validateFile($tempFile);
@@ -92,9 +87,9 @@ class UploadHandler extends Object
             $fileSavePath = $this->filePath . DIRECTORY_SEPARATOR . $fileName;
             $this->getFileSystem()->prepareDirectoryForFile($fileSavePath);
             $file->saveAs($fileSavePath);
-            $this->uploadedFileNames[] = $fileName;
+            $uploadedFileNames[] = $fileName;
         }
-        return $this;
+        return $uploadedFileNames;
     }
 
     /**
@@ -133,15 +128,6 @@ class UploadHandler extends Object
             $filename = call_user_func($formatFileName, $file->getBaseName(), $file->getExtension());
         }
         return $filename;
-    }
-
-    /**
-     * Returns uploaded file names
-     * @return array
-     */
-    public function getUploadedFileNames()
-    {
-        return $this->uploadedFileNames;
     }
 
     /**
