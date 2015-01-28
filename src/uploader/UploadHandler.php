@@ -27,9 +27,10 @@ class UploadHandler extends Object
 
     /**
      * Name of the file field (can be property of a model or a field exact name)
+     *
      * @var string
      */
-    private $fileFieldName;
+    private $fileAttribute;
 
     /**
      * File system component id
@@ -44,7 +45,7 @@ class UploadHandler extends Object
     private $uploadedFileNames = [];
 
     /**
-     * Specify this, when loading image from ActiveForm form
+     * Model instance, this model should provide validators to validate file input
      * @var Model
      */
     public $formModel;
@@ -57,20 +58,21 @@ class UploadHandler extends Object
     public $fileValidator;
 
     /**
-     * @param array $filePath
-     * @param $fileFieldName
-     * @param Model $formModel
+     * @param string $targetDir Directory where file is saved
+     * @param string $fileAttribute Name of the file attribute in model
+     * @param Model $formModel Model instance, used to get validators
      */
-    public function __construct($filePath, Model $formModel, $fileFieldName)
+    public function __construct($targetDir , Model $formModel, $fileAttribute)
     {
-        $this->filePath = $filePath;
-        $this->fileFieldName = $fileFieldName;
+        $this->filePath = $targetDir ;
+        $this->fileAttribute = $fileAttribute;
         $this->formModel = $formModel;
     }
 
     /**
      * @param callable $formatFileName This is a function to format file names.
-     * Callback signature is function($filename, $fileExtension)
+     * Callback signature is function($filename, $fileExtension) Exception is thrown if validation fails
+     * @throws InvalidParamException
      * @return $this
      */
     public function handleUploadedFiles(\Closure $formatFileName = null)
@@ -91,16 +93,17 @@ class UploadHandler extends Object
      */
     public function getUploadedFiles()
     {
-        return UploadedFile::getInstances($this->formModel, $this->fileFieldName);
+        return UploadedFile::getInstances($this->formModel, $this->fileAttribute);
     }
 
     /**
      * @param UploadedFile $file
+     * @throws InvalidParamException
      * @return bool
      */
     protected function validateFile(UploadedFile $file)
     {
-        $validators = $this->formModel->getActiveValidators($this->fileFieldName);
+        $validators = $this->formModel->getActiveValidators($this->fileAttribute);
         foreach ($validators as $validator) {
             if ($validator->validate($file, $error) === false) {
                 throw new InvalidParamException($error);
