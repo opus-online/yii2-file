@@ -21,6 +21,7 @@ try {
   $uploadedFileNames = $fileUpload->handleUploadedFiles();
   foreach ($uploadedFileNames as $fileName) {
     $user->setAttribute('photo_file_name', $fileName);
+    break;
   }
   $user->saveSafe(['photo_file_name']);
 } catch (InvalidFileUploadException $e) {
