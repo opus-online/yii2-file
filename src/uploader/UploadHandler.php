@@ -1,16 +1,13 @@
 <?php
 namespace opus\file\uploader;
 
-use netiarst\file\image\FileHelper;
 use opus\file\FileSystem;
 use Yii;
 use yii\base\InvalidParamException;
 use yii\base\Model;
 use yii\base\Object;
-use yii\helpers\Html;
 use yii\validators\Validator;
 use yii\web\UploadedFile;
-use yii\web\UrlManager;
 
 /**
  * Class UploadHandler
@@ -18,7 +15,7 @@ use yii\web\UrlManager;
  * Initiates thumbnail generating
  *
  * @author Mihkel Viilveer <mihkel@opus.ee>
- * @package netiarst\file\image\uploader
+ * @package opus\file\uploader
  */
 class UploadHandler extends Object
 {
@@ -26,25 +23,31 @@ class UploadHandler extends Object
      * Location where files are saved
      * @var string
      */
-    public $filePath;
+    private $filePath;
 
     /**
      * Name of the file field (can be property of a model or a field exact name)
      * @var string
      */
-    public $fileFieldName;
+    private $fileFieldName;
+
+    /**
+     * File system component id
+     * @var FileSystem
+     */
+    private $fileSystem;
+
+    /**
+     * Paths of uploaded files
+     * @var array
+     */
+    private $uploadedFileNames = [];
 
     /**
      * Specify this, when loading image from ActiveForm form
      * @var Model
      */
     public $formModel;
-
-    /**
-     * File name of uploaded file
-     * @var string
-     */
-    public $randomHashAsFileName = false;
 
     /**
      * Attach custom validator to validate files
@@ -54,31 +57,31 @@ class UploadHandler extends Object
     public $fileValidator;
 
     /**
-     * File system component id
-     * @var string
+     * @param array $filePath
+     * @param $fileFieldName
+     * @param Model $formModel
      */
-    public $fileSystem = 'fs';
+    public function __construct($filePath, Model $formModel, $fileFieldName)
+    {
+        $this->filePath = $filePath;
+        $this->fileFieldName = $fileFieldName;
+        $this->formModel = $formModel;
+    }
 
     /**
-     * Paths of uploaded files
-     * @var array
+     * @param callable $formatFileName This is a function to format file names.
+     * Callback signature is function($filename, $fileExtension)
+     * @return $this
      */
-    private $uploadedFileNames = [];
-
-    /**
-     * 1. get uploaded images OR imported images
-     * 2. Save the original
-     * 3. generate and save the thumbs
-     * 4. create a new relation
-     */
-    public function handleUploadedFiles()
+    public function handleUploadedFiles(\Closure $formatFileName = null)
     {
         foreach ($this->getUploadedFiles() as $tempFile) {
             $this->validateFile($tempFile);
-            $fileSavePath = $this->filePath . '/' . $this->getFileName($tempFile);
+            $fileName = $this->getFileName($tempFile, $formatFileName);
+            $fileSavePath = $this->filePath . DIRECTORY_SEPARATOR . $fileName;
             $this->getFileSystem()->prepareDirectoryForFile($fileSavePath);
             $tempFile->saveAs($fileSavePath);
-            $this->uploadedFileNames[] = $this->getFileName($tempFile);
+            $this->uploadedFileNames[] = $fileName;
         }
         return $this;
     }
@@ -88,12 +91,7 @@ class UploadHandler extends Object
      */
     public function getUploadedFiles()
     {
-        if ($this->formModel instanceof Model) {
-            $files = UploadedFile::getInstances($this->formModel, $this->fileFieldName);
-        } else {
-            $files = UploadedFile::getInstancesByName($this->fileFieldName);
-        }
-        return $files;
+        return UploadedFile::getInstances($this->formModel, $this->fileFieldName);
     }
 
     /**
@@ -102,8 +100,9 @@ class UploadHandler extends Object
      */
     protected function validateFile(UploadedFile $file)
     {
-        if ($this->fileValidator instanceof Validator) {
-            if ($this->fileValidator->validate($file, $error) === false) {
+        $validators = $this->formModel->getActiveValidators($this->fileFieldName);
+        foreach ($validators as $validator) {
+            if ($validator->validate($file, $error) === false) {
                 throw new InvalidParamException($error);
             }
         }
@@ -112,27 +111,24 @@ class UploadHandler extends Object
 
     /**
      * @param UploadedFile $file
+     * @param callable $formatFileName
      * @return string
      */
-    protected function getFileName(UploadedFile $file)
+    protected function getFileName(UploadedFile $file, \Closure $formatFileName = null)
     {
         $filename = $file->name;
-        if ($this->randomHashAsFileName === true) {
-            self::generateFileName($filename, $this->fileNameLength);
+        if (!is_null($formatFileName)) {
+            $filename = call_user_func($formatFileName, $file->getBaseName(), $file->getExtension());
         }
         return $filename;
     }
 
     /**
      * Returns uploaded file names
-     * If one file was uploaded, string is returned
-     * @return array|string
+     * @return array
      */
     public function getUploadedFileNames()
     {
-        if (count($this->uploadedFileNames) === 1) {
-            return reset($this->uploadedFileNames);
-        }
         return $this->uploadedFileNames;
     }
 
@@ -142,20 +138,9 @@ class UploadHandler extends Object
      */
     private function getFileSystem()
     {
-        return Yii::$app->get($this->fileSystem);
-    }
-
-    /**
-     * Creates a cryptographically safe pseudo-random number with a specified length
-     *
-     * @param int $length
-     * @param string $originalName
-     * @return string
-     */
-    static public function generateFileName($originalName, $length = null)
-    {
-        $hash = hash('sha512', base64_encode(openssl_random_pseudo_bytes(512)));
-        is_null($length) && $length = strlen($hash);
-        return sprintf('%s.%s', substr($hash, 0, $length), pathinfo($originalName, PATHINFO_EXTENSION));
+        if (empty($this->fileSystem)) {
+            $this->fileSystem = new FileSystem();
+        }
+        return $this->fileSystem;
     }
 }
