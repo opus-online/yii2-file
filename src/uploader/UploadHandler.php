@@ -1,9 +1,9 @@
 <?php
 namespace opus\file\uploader;
 
+use opus\file\exception\InvalidFileUploadException;
 use opus\file\FileSystem;
 use Yii;
-use yii\base\InvalidParamException;
 use yii\base\Model;
 use yii\base\Object;
 use yii\validators\Validator;
@@ -70,19 +70,28 @@ class UploadHandler extends Object
     }
 
     /**
+     * First all files are validated and added to queue
+     * if validation is okay for all files then files are moved to server
      * @param callable $formatFileName This is a function to format file names.
      * Callback signature is function($filename, $fileExtension) Exception is thrown if validation fails
-     * @throws InvalidParamException
+     * @throws InvalidFileUploadException
      * @return $this
      */
     public function handleUploadedFiles(\Closure $formatFileName = null)
     {
+        /** @var UploadedFile[] $queuedFiles */
+        $queuedFiles = [];
+
         foreach ($this->getUploadedFiles() as $tempFile) {
             $this->validateFile($tempFile);
-            $fileName = $this->getFileName($tempFile, $formatFileName);
+            $queuedFiles[] = $tempFile;
+        }
+
+        foreach ($queuedFiles as $file) {
+            $fileName = $this->getFileName($file, $formatFileName);
             $fileSavePath = $this->filePath . DIRECTORY_SEPARATOR . $fileName;
             $this->getFileSystem()->prepareDirectoryForFile($fileSavePath);
-            $tempFile->saveAs($fileSavePath);
+            $file->saveAs($fileSavePath);
             $this->uploadedFileNames[] = $fileName;
         }
         return $this;
@@ -98,15 +107,15 @@ class UploadHandler extends Object
 
     /**
      * @param UploadedFile $file
-     * @throws InvalidParamException
      * @return bool
+     * @throws InvalidFileUploadException
      */
     protected function validateFile(UploadedFile $file)
     {
         $validators = $this->formModel->getActiveValidators($this->fileAttribute);
         foreach ($validators as $validator) {
             if ($validator->validate($file, $error) === false) {
-                throw new InvalidParamException($error);
+                throw new InvalidFileUploadException($error);
             }
         }
         return true;
