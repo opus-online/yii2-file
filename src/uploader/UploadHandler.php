@@ -3,9 +3,8 @@ namespace opus\file\uploader;
 
 use opus\file\exception\InvalidFileUploadException;
 use opus\file\FileSystem;
-use Yii;
+use yii\base\BaseObject;
 use yii\base\Model;
-use yii\base\Object;
 use yii\validators\Validator;
 use yii\web\UploadedFile;
 
@@ -17,7 +16,7 @@ use yii\web\UploadedFile;
  * @author Mihkel Viilveer <mihkel@opus.ee>
  * @package opus\file\uploader
  */
-class UploadHandler extends Object
+class UploadHandler extends BaseObject
 {
     /**
      * Location where files are saved
